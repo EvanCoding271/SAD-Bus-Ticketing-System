@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Seat Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .bus {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .seat {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .available {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .selected {
+            background-color: #FFC107;
+            color: black;
+        }
+        .booked {
+            background-color: #F44336;
+            color: white;
+            cursor: not-allowed;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bus Seat Real-Time Tracker</h1>
+    <div class="bus" id="bus"></div>
+    <div class="controls">
+        <button id="bookBtn">Book Selected Seats</button>
+        <button id="resetBtn">Reset Selection</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const busDiv = document.getElementById('bus');
+        const bookBtn = document.getElementById('bookBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        let seats = [];
+
+        function renderSeats(seatsData) {
+            seats = seatsData;
+            busDiv.innerHTML = '';
+            seats.forEach(seat => {
+                const seatDiv = document.createElement('div');
+                seatDiv.className = `seat ${seat.status}`;
+                seatDiv.textContent = seat.id;
+                seatDiv.onclick = () => selectSeat(seat.id);
+                busDiv.appendChild(seatDiv);
+            });
+        }
+
+        function selectSeat(seatId) {
+            socket.emit('selectSeat', seatId);
+        }
+
+        bookBtn.onclick = () => {
+            seats.filter(s => s.status === 'selected').forEach(seat => {
+                socket.emit('bookSeat', seat.id);
+            });
+        };
+
+        resetBtn.onclick = () => {
+            // Reset selected to available
+            seats.forEach(seat => {
+                if (seat.status === 'selected') {
+                    seat.status = 'available';
+                }
+            });
+            renderSeats(seats);
+        };
+
+        socket.on('seatsUpdate', (seatsData) => {
+            renderSeats(seatsData);
+        });
+    </script>
+</body>
+</html>
